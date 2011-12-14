@@ -19,21 +19,21 @@ class Storage(object):
             data.update(alias=alias)
         return data
 
-    def add_alias(self, email, alias, origin='', status='active'):
-        rv = {'email': email, 'origin': origin, 'status': status}
+    def add_alias(self, user, alias, origin='', status='active'):
+        rv = {'email': user, 'origin': origin, 'status': status}
         self.redis.hmset(self.aliases % (alias, origin), rv)
-        self.redis.sadd(self.emails % email, '%s-%s' % (alias, origin))
+        self.redis.sadd(self.emails % user, '%s-%s' % (alias, origin))
         return self.resolve_alias(alias)
 
-    def get_aliases(self, email):
+    def get_aliases(self, user):
         # XXX: this makes N redis calls, one per alias.
-        aliases = self.redis.smembers(self.emails % email)
+        aliases = self.redis.smembers(self.emails % user)
         return map(self.resolve_alias, aliases)
 
-    def delete_alias(self, email, alias, origin=''):
+    def delete_alias(self, user, alias, origin=''):
         self.redis.delete(self.aliases % (alias, origin))
-        self.redis.srem(self.emails % email, '%s-%s' % (alias, origin))
-        return {'email': email,
+        self.redis.srem(self.emails % user, '%s-%s' % (alias, origin))
+        return {'email': user,
                 'alias': alias,
                 'origin': origin,
                 'status': 'deleted'}

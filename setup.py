@@ -4,11 +4,11 @@ from setuptools import setup
 
 setup(
     name='bipostal_storage',
-    version='0.1',
+    version='0.2',
     description='Shared storage for bipostal* functions',
     author='JR Conlin',
     author_email='jrconlin+bipostal@mozilla.org',
-    packages=['bipostal.storage'],
+    packages=['bipostal', 'bipostal.storage'],
     long_description=""""
     Common storage library for BIPostal
     """,
@@ -21,8 +21,8 @@ setup(
     keywords='Mozilla Services BIPostal',
     license='BSD',
     install_requires=['redis', 
-        'DBUtils.SimplePooledDB', 
-        'memcache', 
-        'MySQLdb'],
+        'DBUtils', 
+        'python_memcached', 
+        'mysql_python'],
 )
 
