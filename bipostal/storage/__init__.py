@@ -1,7 +1,6 @@
-from pyramid.util import DottedNameResolver
-
+from bipostal import _resolve_name
 
 def configure_from_settings(object_name, settings):
     config = dict(settings)
-    cls = DottedNameResolver(None).resolve(config.pop('backend'))
+    cls = _resolve_name(config.pop('backend'))
     return cls(**config)
