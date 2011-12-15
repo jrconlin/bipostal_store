@@ -1,4 +1,3 @@
-
 def _resolve_name(name):
     """ Resolve a string into a corresponding object. 
         borrowed from moz-core.
