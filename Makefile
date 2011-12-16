@@ -18,7 +18,7 @@ build:
 install: 
 	$(PY) setup.py install
 
-egg: clean
+egg: clean build
 	$(PY) setup.py bdist_egg --dist-dir dist
 
 test: 

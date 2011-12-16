@@ -85,6 +85,14 @@ class Storage(object):
                 db.execute(query)
             else:
                 alias = row[0]
+                query = ('update %s set status="%s" where ' +
+                        'alias="%s" and origin="%s"')
+                query = query % (
+                        self._stable,
+                        MySQLdb.escape_string(status),
+                        MySQLdb.escape_string(alias),
+                        MySQLdb.escape_string(origin))
+                db.execute(query)
             self._mcache.set('s2u:%s' % str(alias), str(user))
             connection.close()
             return {'email': user,
@@ -125,10 +133,12 @@ class Storage(object):
                                                                     str(e)))
             raise
 
-    def set_status_alias(self, user, alias, origin='', status='deleted'):
+    def set_status_alias(self, user, alias, origin=None, status='deleted'):
         try:
             connection = self._pool.connection()
             db = connection.cursor()
+            if origin is None:
+                (token, origin) = alias.split('@')
             query = ('update %s set status="%s" where user="%s" and ' +
                         'origin="%s" and alias="%s"')
             query = query % (
@@ -147,16 +157,18 @@ class Storage(object):
             logging.error('Could not %s alias %s for user %s "%s"' % (
                 status, alias, user, str(e)))
 
-    def delete_alias(self, user, alias, origin=''):
+    def delete_alias(self, user, alias, origin=None):
         logging.debug('Deleting alias %s for user %s' % (alias, user))
         result = self.set_status_alias(user, alias, origin, status='deleted')
-        self._mcache.delete('s2u:%s' % str(alias))
+        if result:
+            self._mcache.delete('s2u:%s' % str(alias))
         return result
 
-    def disable_alias(self, user, alias, origin=''):
+    def disable_alias(self, user, alias, origin=None):
         logging.debug('Disabling alias %s for user %s' % (alias, user))
         result = self.set_status_alias(user, alias, origin, status='disabled')
-        self._mcache.delete('s2u:%s' % str(alias))
+        if result:
+             self._mcache.delete('s2u:%s' % str(alias))
         return result
 
     def flushall(self):
