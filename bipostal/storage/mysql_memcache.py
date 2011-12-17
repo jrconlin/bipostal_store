@@ -25,6 +25,7 @@ class Storage(object):
             logging.error("""Could not initialize Storage: "%s" """, str(ex))
 
     def resolve_alias(self, alias, origin='', status='active'):
+        alias = alias.lower()
         lookup = str('s2u:%s' % str(alias))
         mresult = self._mcache.get(lookup)
         if mresult is None:
@@ -55,6 +56,7 @@ class Storage(object):
                   status='active',
                   info=None,
                   created=None):
+        alias = alias.lower()
         connection = self._pool.connection()
         db = connection.cursor()
         if created is None:
