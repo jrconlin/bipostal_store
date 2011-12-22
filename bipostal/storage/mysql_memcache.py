@@ -61,6 +61,7 @@ class Storage(object):
                   status='active',
                   info=None,
                   created=None):
+        alias = alias.lower()
         connection = self._pool.connection()
         db = connection.cursor()
         if created is None:
