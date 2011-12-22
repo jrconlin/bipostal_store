@@ -13,7 +13,7 @@ clean:
 
 build:
 	$(VE) --no-site-packages .
-	bin/pip install -r dev-reqs.txt
+	$(PI) install -r dev-reqs.txt
 
 install: 
 	$(PY) setup.py install
