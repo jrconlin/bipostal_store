@@ -1,5 +1,4 @@
 nose
 redis == 2.4.10
-memcached
 python_memcached
 mysql_python

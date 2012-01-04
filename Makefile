@@ -13,12 +13,12 @@ clean:
 
 build:
 	$(VE) --no-site-packages .
-	bin/pip install -r dev-reqs.txt
+	$(PI) install -r dev-reqs.txt
 
 install: 
 	$(PY) setup.py install
 
-egg: clean
+egg: clean build
 	$(PY) setup.py bdist_egg --dist-dir dist
 
 test: 

@@ -24,20 +24,24 @@ class Storage(object):
         except Exception, ex:
             logging.error("""Could not initialize Storage: "%s" """, str(ex))
 
-    def resolve_alias(self, alias, origin='', status='active'):
+    def resolve_alias(self, alias, origin=None, status='active'):
         lookup = str('s2u:%s' % str(alias))
         mresult = self._mcache.get(lookup)
         if mresult is None:
             connection = self._pool.connection()
             db = connection.cursor()
             logging.info('Cache miss for %s' % alias );
-            query = ('select user from %s where origin="%s" and ' +
-                        'alias="%s" and status="%s" limit 1;')
+            query = ('select user from %s where alias="%s" ' +
+                        'and status="%s" %s limit 1;')
+            if origin is not None:
+                origin = 'and origin="%s"' % MySQLdb.escape_string(origin)
+            else:
+                origin = ''
             query = query % (
                  self._stable,
-                 MySQLdb.escape_string(origin),
                  MySQLdb.escape_string(alias),
-                 MySQLdb.escape_string(status))
+                 MySQLdb.escape_string(status),
+                 origin)
             db.execute(query)
             result = db.fetchone()
             connection.close()
@@ -46,21 +50,26 @@ class Storage(object):
                 return {}
             mresult = str(result[0])
             self._mcache.set(lookup, mresult)
+            if origin == '':
+                origin = None
         return {'email': mresult,
-                'origin':origin,
+                'origin': origin,
                 'alias': alias,
                 'status': status}
 
-    def add_alias(self, user, alias, origin='',
+    def add_alias(self, user, alias, origin=None,
                   status='active',
                   info=None,
                   created=None):
+        alias = alias.lower()
         connection = self._pool.connection()
         db = connection.cursor()
         if created is None:
             created = time.time()
         if info is None:
             info = {}
+        if origin is None:
+            origin = ''
         try:
             query = ('select alias from %s where user="%s"' +
                         ' and origin="%s" limit 1;') % (
@@ -85,12 +94,23 @@ class Storage(object):
                 db.execute(query)
             else:
                 alias = row[0]
+                query = ('update %s set status="%s" where ' +
+                        'alias="%s" and origin="%s"')
+                query = query % (
+                        self._stable,
+                        MySQLdb.escape_string(status),
+                        MySQLdb.escape_string(alias),
+                        MySQLdb.escape_string(origin))
+                db.execute(query)
             self._mcache.set('s2u:%s' % str(alias), str(user))
             connection.close()
-            return {'email': user,
+            if origin == '':
+                origin = None
+            resp = {'email': user,
                     'alias': alias,
                     'origin': origin,
                     'status': status.lower()}
+            return resp
         except ValueError, e:
             logging.error("""Invalid value for alias creation "%s" """ %
                           str(e))
@@ -115,9 +135,12 @@ class Storage(object):
             connection.close()
             result = []
             for row in rows:
+                origin = row[1]
+                if origin is '':
+                    origin = None
                 result.append({'alias': row[0],
                                'email': user,
-                               'origin': row[1],
+                               'origin': origin,
                                'status': row[2]})
             return result
         except Exception, e:
@@ -125,10 +148,12 @@ class Storage(object):
                                                                     str(e)))
             raise
 
-    def set_status_alias(self, user, alias, origin='', status='deleted'):
+    def set_status_alias(self, user, alias, origin=None, status='deleted'):
         try:
             connection = self._pool.connection()
             db = connection.cursor()
+            if origin is None:
+                origin = ''
             query = ('update %s set status="%s" where user="%s" and ' +
                         'origin="%s" and alias="%s"')
             query = query % (
@@ -139,6 +164,8 @@ class Storage(object):
                         MySQLdb.escape_string(alias))
             db.execute(query)
             connection.close()
+            if origin == '':
+                origin = None
             return {'alias': alias,
                     'email': user,
                     'origin': origin,
@@ -147,16 +174,18 @@ class Storage(object):
             logging.error('Could not %s alias %s for user %s "%s"' % (
                 status, alias, user, str(e)))
 
-    def delete_alias(self, user, alias, origin=''):
+    def delete_alias(self, user, alias, origin=None):
         logging.debug('Deleting alias %s for user %s' % (alias, user))
         result = self.set_status_alias(user, alias, origin, status='deleted')
-        self._mcache.delete('s2u:%s' % str(alias))
+        if result:
+            self._mcache.delete('s2u:%s' % str(alias))
         return result
 
-    def disable_alias(self, user, alias, origin=''):
+    def disable_alias(self, user, alias, origin=None):
         logging.debug('Disabling alias %s for user %s' % (alias, user))
         result = self.set_status_alias(user, alias, origin, status='disabled')
-        self._mcache.delete('s2u:%s' % str(alias))
+        if result:
+             self._mcache.delete('s2u:%s' % str(alias))
         return result
 
     def flushall(self):
