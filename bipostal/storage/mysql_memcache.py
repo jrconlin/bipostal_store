@@ -1,24 +1,41 @@
-import MySQLdb
-from DBUtils.SimplePooledDB import PooledDB
 import memcache
 import re
 import logging
 import time
 import json
+from sqlalchemy import (Table, Column, 
+        String, Integer, Enum, MetaData, Text,
+        create_engine, text)
 
 class Storage(object):
 
     def __init__(self, **kw):
         try:
             self.config = kw;
-            self._pool = PooledDB(MySQLdb, 5,
-                host = kw['mysql.host'],
-                user = kw['mysql.user'],
-                passwd = kw['mysql.password'])
-            self._stable = self.config.get('mysql.alias_db',
-                    'bipostal.alias');
-            self._utable = self.config.get('mysql.user_db',
-                    'bipostal.user');
+            dsn = 'mysql://%s:%s@%s/%s' % (
+                    self.config.get('mysql.user', 'user'),
+                    self.config.get('mysql.password', 'password'),
+                    self.config.get('mysql.host', 'localhost'),
+                    self.config.get('msyql.db', 'bipostal')
+                    )
+            self.engine = create_engine(dsn)
+            self.metadata = MetaData()
+            self.user = Table('user', self.metadata,
+                    Column('user', String(255), primary_key=True),
+                    Column('email', String(255)),
+                    Column('metainfo', Text, nullable=True),
+                    )
+            self.alias = Table('alias', self.metadata,
+                    Column('alias', String(255), primary_key=True),
+                    Column('user', String(255)),
+                    Column('origin', String(190), nullable=True),
+                    Column('created', Integer),
+                    Column('status', Enum(['active', 'inactive', 'deleted'],
+                        strict=True,
+                        default='active')),
+                    Column('metainfo', Text, nullable=True)
+                    )
+            self.metadata.create_all(self.engine)
             self._mcache = memcache.Client(re.split('\s*,\s*',
                     kw['memcache.servers']))
         except Exception, ex:
@@ -28,23 +45,14 @@ class Storage(object):
         lookup = str('s2u:%s' % str(alias))
         mresult = self._mcache.get(lookup)
         if mresult is None:
-            connection = self._pool.connection()
-            db = connection.cursor()
             logging.info('Cache miss for %s' % alias );
-            query = ('select user from %s where alias="%s" ' +
-                        'and status="%s" %s limit 1;')
+            query = 'select user from alias where alias=:alias and status=:status '
             if origin is not None:
-                origin = 'and origin="%s"' % MySQLdb.escape_string(origin)
-            else:
-                origin = ''
-            query = query % (
-                 self._stable,
-                 MySQLdb.escape_string(alias),
-                 MySQLdb.escape_string(status),
-                 origin)
-            db.execute(query)
-            result = db.fetchone()
-            connection.close()
+                query += 'and origin=:origin ' 
+            query += 'limit 1;'
+            result = self.engine.execute(text(query), alias=alias, 
+                        status=status, 
+                        origin=origin).fetchone()
             if result is None:
                 logging.info('No active alias for %s' % alias )
                 return {}
@@ -62,48 +70,46 @@ class Storage(object):
                   info=None,
                   created=None):
         alias = alias.lower()
-        connection = self._pool.connection()
-        db = connection.cursor()
         if created is None:
             created = time.time()
         if info is None:
             info = {}
-        if origin is None:
-            origin = ''
         try:
-            query = ('select alias from %s where user="%s"' +
-                        ' and origin="%s" limit 1;') % (
-                            self._stable,
-                            MySQLdb.escape_string(user),
-                            MySQLdb.escape_string(origin))
-            db.execute(query)
-            row = db.fetchone()
+            query = 'select alias from alias where user=:user '
+            if origin is not None:
+                query += 'and origin=:origin '
+            query += 'limit 1;'
+            print query;
+            row = self.engine.execute(text(query),
+                    user=user,
+                    origin=origin).fetchone()
             if row is None:
                 logging.debug('Adding new alias %s for user %s' % 
                         (alias, user))
-                query = ('insert into %s ' +
-                        '(user,origin,alias,status,created)' +
-                        'values("%s","%s","%s","%s",%s);')
-                query = query % (
-                         self._stable,
-                         MySQLdb.escape_string(user),
-                         MySQLdb.escape_string(origin),
-                         MySQLdb.escape_string(alias),
-                         MySQLdb.escape_string(status),
-                         int(created))
-                db.execute(query)
+                query = ('insert into alias '
+                        '(user, origin, alias, status, created) '
+                        'values(:user, :origin, :alias, :status, :created);')
+                """
+                if origin is None:
+                    origin = ''
+                """
+                self.engine.execute(text(query),
+                        user=user,
+                        origin=origin,
+                        alias=alias,
+                        status=status,
+                        created=int(created))
             else:
                 alias = row[0]
-                query = ('update %s set status="%s" where ' +
-                        'alias="%s" and origin="%s"')
-                query = query % (
-                        self._stable,
-                        MySQLdb.escape_string(status),
-                        MySQLdb.escape_string(alias),
-                        MySQLdb.escape_string(origin))
-                db.execute(query)
+                query = ('update alias set status=:status where '
+                        'alias=alias')
+                if origin is not None:
+                    query += 'and origin=:origin '
+                self.engine.execute(text(query),
+                        status=status, 
+                        alias=alias,
+                        origin=origin)
             self._mcache.set('s2u:%s' % str(alias), str(user))
-            connection.close()
             if origin == '':
                 origin = None
             resp = {'email': user,
@@ -117,22 +123,15 @@ class Storage(object):
             return False
 
     def get_aliases(self, user, status='active'):
-        connection = self._pool.connection()
-        db = connection.cursor()
         try:
-            query = ('select alias,origin,status ' +
-                        'from %s where ' +
-                        'user="%s"')
-            query = query % (
-                        self._stable,
-                        MySQLdb.escape_string(user))
+            query = ('select alias, origin, status '
+                        'from alias where '
+                        'user=:user')
             if status.lower() not in ['all', '*', '%']:
-                query = query +' and status="%s"' % (
-                    MySQLdb.escape_string(status)
-                )
-            db.execute(query)
-            rows = db.fetchall()
-            connection.close()
+                query +=' and status=:status ' 
+            rows = self.engine.execute(text(query),
+                    user=user,
+                    status=status).fetchall()
             result = []
             for row in rows:
                 origin = row[1]
@@ -150,22 +149,15 @@ class Storage(object):
 
     def set_status_alias(self, user, alias, origin=None, status='deleted'):
         try:
-            connection = self._pool.connection()
-            db = connection.cursor()
-            if origin is None:
-                origin = ''
-            query = ('update %s set status="%s" where user="%s" and ' +
-                        'origin="%s" and alias="%s"')
-            query = query % (
-                        self._stable,
-                        MySQLdb.escape_string(status.lower()),
-                        MySQLdb.escape_string(user),
-                        MySQLdb.escape_string(origin),
-                        MySQLdb.escape_string(alias))
-            db.execute(query)
-            connection.close()
-            if origin == '':
-                origin = None
+            query = ('update alias set status=:status where user=:user and '
+                    'alias=:alias')
+            if origin is not None:
+                query += ' and origin=:origin '
+            self.engine.execute(text(query),
+                    status=status,
+                    user=user,
+                    origin=origin,
+                    alias=alias)
             return {'alias': alias,
                     'email': user,
                     'origin': origin,
@@ -189,12 +181,8 @@ class Storage(object):
         return result
 
     def flushall(self):
-        connection = self._pool.connection()
-        db = connection.cursor()
         logging.debug('Flushing aliases')
-        db.execute('delete from %s;' % self._stable)
-        self._mcache.flush_all()
-        connection.close()
+        self.engine.execute(text('delete from alias;'))
 
     def create_user(self, user, email=None, metainfo=None):
         if email is None:
@@ -204,18 +192,14 @@ class Storage(object):
         user_record = self._mcache.get('uid:%s' % str(user))
         if user_record is None:
             try:
-                connection = self._pool.connection()
-                db = connection.cursor()
                 logging.debug('Creating user %s' % email)
-                db.execute(("insert into %s (user, email, " + 
-                    "metainfo) values ('%s', '%s', '%s') " +
-                    "on duplicate key update email = '%s' ;") % (
-                    self._utable,
-                    MySQLdb.escape_string(user),
-                    MySQLdb.escape_string(email),
-                    MySQLdb.escape_string(json.dumps(metainfo)),
-                    MySQLdb.escape_string(email),
-                        ))
+                self.engine.execute(text('insert into user (user, email, ' 
+                    'metainfo) values (:user, :email, metainfo) '
+                    'on duplicate key update email = :email ;'), 
+                    user=user,
+                    email=email,
+                    metainfo = json.dumps(metainfo),
+                    )
                 self._mcache.set('uid:%s' % str(user), 
                         json.dumps({'created': int(time.time())}))
                 return user
