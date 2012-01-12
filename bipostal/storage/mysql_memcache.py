@@ -180,9 +180,12 @@ class Storage(object):
              self._mcache.delete('s2u:%s' % str(alias))
         return result
 
-    def flushall(self):
+    def flushall(self, pattern=None):
         logging.debug('Flushing aliases')
-        self.engine.execute(text('delete from alias;'))
+        sql = 'delete from alias '
+        if pattern is not None:
+            sql += 'where alias is like :pattern'
+        self.engine.execute(text(sql), pattern=pattern)
 
     def create_user(self, user, email=None, metainfo=None):
         if email is None:
