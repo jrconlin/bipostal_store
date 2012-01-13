@@ -9,16 +9,23 @@ from sqlalchemy import (Table, Column,
 
 class Storage(object):
 
-    def __init__(self, **kw):
+    def _connect(self):
         try:
-            self.config = kw;
             dsn = 'mysql://%s:%s@%s/%s' % (
                     self.config.get('mysql.user', 'user'),
                     self.config.get('mysql.password', 'password'),
                     self.config.get('mysql.host', 'localhost'),
                     self.config.get('msyql.db', 'bipostal')
                     )
-            self.engine = create_engine(dsn)
+            self.engine = create_engine(dsn,pool_recycle=3600)
+        except Exception, e:
+            logging.error('Could not connect to db "%s"' % repr(e))
+            raise;
+        
+    def __init__(self, **kw):
+        try:
+            self.config = kw;
+            self._connect()
             self.metadata = MetaData()
             self.user = Table('user', self.metadata,
                     Column('user', String(255), primary_key=True),
