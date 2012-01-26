@@ -1,3 +1,8 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+
+
 class Storage(object):
 
     key_pattern = "%s-%s"
@@ -21,7 +26,7 @@ class Storage(object):
         result = []
         aliases = self.db.get(user, [])
         for alias in aliases:
-            elem = alias.split('-',1)
+            elem = alias.split('-', 1)
             result.append(self.resolve_alias(alias=elem[0], origin=elem[1]))
         return result
 

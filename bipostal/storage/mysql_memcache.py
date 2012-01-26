@@ -1,11 +1,15 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+import json
+import logging
 import memcache
 import re
-import logging
 import time
-import json
-from sqlalchemy import (Table, Column, 
+from sqlalchemy import (Table, Column,
         String, Integer, Enum, MetaData, Text,
         create_engine, text)
+
 
 class Storage(object):
 
@@ -17,14 +21,14 @@ class Storage(object):
                     self.config.get('mysql.host', 'localhost'),
                     self.config.get('msyql.db', 'bipostal')
                     )
-            self.engine = create_engine(dsn,pool_recycle=3600)
+            self.engine = create_engine(dsn, pool_recycle=3600)
         except Exception, e:
             logging.error('Could not connect to db "%s"' % repr(e))
-            raise;
-        
+            raise
+
     def __init__(self, **kw):
         try:
-            self.config = kw;
+            self.config = kw
             self._connect()
             self.metadata = MetaData()
             self.user = Table('user', self.metadata,
@@ -52,13 +56,14 @@ class Storage(object):
         lookup = str('s2u:%s' % str(alias))
         mresult = self._mcache.get(lookup)
         if mresult is None:
-            logging.info('Cache miss for %s' % alias );
-            query = 'select user from alias where alias=:alias and status=:status '
+            logging.info('Cache miss for %s' % alias )
+            query = ('select user from alias where ' +
+                'alias=:alias and status=:status ')
             if origin is not None:
-                query += 'and origin=:origin ' 
+                query += 'and origin=:origin '
             query += 'limit 1;'
-            result = self.engine.execute(text(query), alias=alias, 
-                        status=status, 
+            result = self.engine.execute(text(query), alias=alias,
+                        status=status,
                         origin=origin).fetchone()
             if result is None:
                 logging.info('No active alias for %s' % alias )
@@ -86,12 +91,11 @@ class Storage(object):
             if origin is not None:
                 query += 'and origin=:origin '
             query += 'limit 1;'
-            print query;
             row = self.engine.execute(text(query),
                     user=user,
                     origin=origin).fetchone()
             if row is None:
-                logging.debug('Adding new alias %s for user %s' % 
+                logging.debug('Adding new alias %s for user %s' %
                         (alias, user))
                 query = ('insert into alias '
                         '(user, origin, alias, status, created) '
@@ -113,7 +117,7 @@ class Storage(object):
                 if origin is not None:
                     query += 'and origin=:origin '
                 self.engine.execute(text(query),
-                        status=status, 
+                        status=status,
                         alias=alias,
                         origin=origin)
             self._mcache.set('s2u:%s' % str(alias), str(user))
@@ -135,7 +139,7 @@ class Storage(object):
                         'from alias where '
                         'user=:user')
             if status.lower() not in ['all', '*', '%']:
-                query +=' and status=:status ' 
+                query += ' and status=:status '
             rows = self.engine.execute(text(query),
                     user=user,
                     status=status).fetchall()
@@ -184,7 +188,7 @@ class Storage(object):
         logging.debug('Disabling alias %s for user %s' % (alias, user))
         result = self.set_status_alias(user, alias, origin, status='disabled')
         if result:
-             self._mcache.delete('s2u:%s' % str(alias))
+            self._mcache.delete('s2u:%s' % str(alias))
         return result
 
     def flushall(self, pattern=None):
@@ -203,18 +207,18 @@ class Storage(object):
         if user_record is None:
             try:
                 logging.debug('Creating user %s' % email)
-                self.engine.execute(text('insert into user (user, email, ' 
+                self.engine.execute(text('insert into user (user, email, '
                     'metainfo) values (:user, :email, metainfo) '
-                    'on duplicate key update email = :email ;'), 
+                    'on duplicate key update email = :email ;'),
                     user=user,
                     email=email,
-                    metainfo = json.dumps(metainfo),
+                    metainfo=json.dumps(metainfo),
                     )
-                self._mcache.set('uid:%s' % str(user), 
+                self._mcache.set('uid:%s' % str(user),
                         json.dumps({'created': int(time.time())}))
                 return user
             except Exception, e:
-                logging.error("Could not create new user [%s]" % 
+                logging.error("Could not create new user [%s]" %
                     repr(e))
                 raise
         return user
