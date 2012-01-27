@@ -1,0 +1,134 @@
+commit 22ace48cc36fa0f3d9fd745b46042ea4e6988c21
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Fri Jan 13 13:37:48 2012 -0800
+
+    Added pool_recycle to connect
+    
+    Apparently, while sqlalchemy creates a pool for connections, those
+    connections can be expired and go stale. The pool doesn't auto-refresh
+    the handles (which is silly, but hey.)
+    
+    MySQL normally marks connections stale after being idle for 8 hours.
+    Currently set the handles to auto-refresh every hour.
+
+commit 816ae89d6382e449e4a95de7f55e3d7b6559f51a
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Thu Jan 12 11:13:36 2012 -0800
+
+    Added opt. flush for pattern
+    
+    For testing, I'm creating a number of tokenized aliases. I added a
+    parameter to the flush call that will allow for patterned deletes.
+
+commit 690f511b40ba72b74f7a7cfb071c28b85756d901
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Fri Jan 6 15:22:35 2012 -0800
+
+    Convert to SQLAlchemy
+
+commit f435204b3ed59e3b9ce0daf3fbc546a337a13371
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Thu Jan 5 16:47:17 2012 -0800
+
+    adding tests
+
+commit 3d9a92e166ddcbb44049ce114a4658c86c431c9c
+Merge: 621e9cc 68cd3d1
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Wed Jan 4 10:27:19 2012 -0800
+
+    Merge branch 'master' of github.com:jrconlin/bipostal_store into dev
+
+commit 621e9cc9c2bed5a1abbdf08ecc9038b3b766b4c7
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Wed Jan 4 10:26:13 2012 -0800
+
+    added patch for auto grouping (for dumb calls)
+
+commit 68cd3d179b899c85331b1dff308878dbce9a14fb
+Merge: 5e989c2 cd86988
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Thu Dec 22 15:10:58 2011 -0800
+
+    Merge branch 'master' of github.com:jrconlin/bipostal_store
+    
+    Conflicts:
+    	bipostal/storage/mysql_memcache.py
+
+commit 5e989c224265eaf119661d36a97891b316538228
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Thu Dec 22 15:08:02 2011 -0800
+
+    Convert origin to None instead of 'blank'
+    
+    Internally stored as ''.
+
+commit cd86988bf1a4f913471aae8965174f8b62451359
+Author: JR Conlin <jrconlin+git@mozilla.com>
+Date:   Fri Dec 16 21:40:44 2011 -0800
+
+    force tokens to lowercase (because gmail.)
+
+commit 50ab0c464de25ecfd0a36e724b1078cd75c4f5f6
+Author: JR Conlin <jrconlin+git@mozilla.com>
+Date:   Fri Dec 16 14:19:40 2011 -0800
+
+    Fixed bad origin on delete
+    
+    added forced clean on egg build.
+
+commit 6098ddfae950c61d99ecee18e2c4070e2c338c1c
+Merge: fff0e47 3bb7832
+Author: JR Conlin <jrconlin+git@mozilla.com>
+Date:   Thu Dec 15 10:50:57 2011 -0800
+
+    Merge branch 'master' of github.com:jrconlin/bipostal_store
+
+commit fff0e47104a4fa5d9afbdbf60e46f97e52a00bc3
+Author: JR Conlin <jrconlin+git@mozilla.com>
+Date:   Thu Dec 15 10:50:17 2011 -0800
+
+    fix memcache include
+
+commit 3bb78327c7f14f47e5cd642a531b8696dbe5d086
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Thu Dec 15 10:48:43 2011 -0800
+
+    removed python dep
+
+commit 92b01f4dcb59db8ba3f9b1fa864440943dbe16b3
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Wed Dec 14 12:04:56 2011 -0800
+
+    Removed pyramid dep.s from pip
+
+commit e2cba2ae90249a81d2e9ba2e353095579619e665
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Wed Dec 14 12:03:03 2011 -0800
+
+    Removed python DottedResolver dep.
+    
+    reduced weight of package. Using method "borrowed" from moz.services
+
+commit 23d214e554556509424f14f9a5736d1ae166c31d
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Tue Dec 13 21:53:27 2011 -0800
+
+    swapped 'email' for 'user'
+    
+    Added add'l Makefile commands for egg build
+    Swapped the 'email' parameter for 'user' (a bit more accurate, since
+    some users may not be emails.)
+    Cleaned up setup.py
+
+commit 5672bee64ac43c2fa0be2d5078753d225313779a
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Tue Dec 13 15:29:43 2011 -0800
+
+    Added add'l __init__ file, make commands.
+
+commit 2dae36be316bc981cfeb29055958e1fdd21f4f17
+Author: jrconlin <jconlin+git@mozilla.com>
+Date:   Tue Dec 13 11:06:18 2011 -0800
+
+    Initial checkin

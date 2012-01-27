@@ -1,0 +1,9 @@
+AUTHORS
+CHANGES
+INSTALL
+LICENCE
+README
+Makefile
+dev-reqs.txt
+setup.py
+recursive-include bipostal *.py
