@@ -4,7 +4,7 @@ EI = $(TP)/bin/easy_install
 PY = $(TP)/bin/python
 PI = $(TP)/bin/pip
 APPNAME = bipostal
-NO = bin/nosetests --with-xunit --cover-package=$(APPNAME)
+NO = bin/nosetests -s --with-xunit --cover-package=$(APPNAME)
 
 clean:
 	rm -rf bipostal_storage.egg-info
@@ -18,8 +18,8 @@ build:
 install: 
 	$(PY) setup.py install
 
-egg: clean build
-	$(PY) setup.py bdist_egg --dist-dir dist
+dist: clean build
+	$(PY) setup.py sdist --dist-dir dist
 
 test: 
 	$(NO) $(APPNAME)

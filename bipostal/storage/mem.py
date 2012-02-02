@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import time
+
 
 class Storage(object):
 
@@ -9,6 +11,7 @@ class Storage(object):
 
     def __init__(self, **kw):
         self.db = {}
+        self.user = {}
 
     def resolve_alias(self, alias, origin=None):
         return self.db.get(self.key_pattern % (alias, origin), {})
@@ -39,3 +42,25 @@ class Storage(object):
                 'alias': alias,
                 'origin': origin,
                 'status': 'deleted'}
+
+    def get_user(self, user):
+        if user is None:
+            return None
+        return self.user[user]
+
+    def remove_user(self, user, email):
+        if user is None:
+            return None
+        del self.user[user]
+
+    def create_user(self, user, email=None, metainfo=None):
+        if email is None:
+            email = user
+        if metainfo is None:
+            metainfo = {}
+        if 'created' not in metainfo:
+            metainfo.update({'created': int(time.time())})
+        self.user[user] = {'user': user,
+                'email': email,
+                'metainfo': metainfo}
+        return self.user[user]
