@@ -1,8 +1,30 @@
+import json
 import unittest2
 
 from nose.tools import eq_
 
 from bipostal.storage import configure_from_settings
+from pyramid import testing
+
+class JSONRequest(testing.DummyRequest):
+
+    def __init__(self, **kw):
+        super(JSONRequest, self).__init__(**kw)
+        if 'post' in kw:
+            self.body = kw['post']
+
+    @property
+    def json_body(self):
+        return json.loads(self.body, encoding=self.charset)
+
+
+class DummyAuth(object):
+
+    def set_dummy_return(self, response):
+        self.response = response;
+
+    def get_user_id(self, request):
+        return self.reponse; 
 
 
 class StorageTest(unittest2.TestCase):
@@ -12,6 +34,13 @@ class StorageTest(unittest2.TestCase):
     email = 'email@example.com'
     alias = 'alias@example.com'
     alias2 = 'alias2@example.com'
+
+    def setUp(self):
+        self.request = JSONRequest(post=json.dumps({'alias': 
+            '123abc@example.com',
+            'audience': self.audience}))
+        self.request.registry['auth'] = DummyAuth()
+        self.request.registry['auth'].set_dummy_return(self.email)
 
     def test_resolve_alias(self):
         if self.storage is None:
@@ -70,7 +99,7 @@ class StorageTest(unittest2.TestCase):
         eq_(sorted(self.storage.get_aliases(self.email), key=key),
             sorted(expected, key=key))
 
-    def test_get_aliases_fail_unkwown_email(self):
+    def test_get_aliases_fail_unknown_email(self):
         # Default to [] when we try to get aliases for an unknown email.
         if self.storage is None:
             return;
@@ -106,12 +135,29 @@ class StorageTest(unittest2.TestCase):
         self.storage.delete_alias(self.email, self.alias)
 
 
+    def test_user(self):
+        if self.storage is None:
+            return
+        user_record = self.storage.create_user(self.email,
+                self.email)
+        eq_(user_record.get('email'), self.email)
+        user_record['metainfo']['android'] = 'android_123'
+        user_record1 = self.storage.create_user(self.email,
+                self.email,
+                user_record['metainfo']);
+        eq_(user_record1['metainfo']['android'], "android_123")
+        user_record = self.storage.get_user(self.email)
+        eq_(user_record1, user_record)
+        self.storage.remove_user(self.email, self.email)
+
+
 class MemStorageTest(StorageTest):
     __test__ = True
 
     def setUp(self):
         settings = {'backend': 'bipostal.storage.mem.Storage'}
         self.storage = configure_from_settings('storage', settings)
+
 
 """
 class RedisStorageTest(StorageTest):
@@ -153,3 +199,4 @@ class MysqlMemcacheTest(StorageTest):
                     'memcache.servers': 'localhost:11211'}
         self.storage = configure_from_settings('storage', settings)
         self.storage.flushall()
+

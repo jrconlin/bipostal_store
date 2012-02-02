@@ -201,24 +201,46 @@ class Storage(object):
     def create_user(self, user, email=None, metainfo=None):
         if email is None:
             email = user
-        if metainfo is None:
-            metainfo = {'created': int(time.time())}
-        user_record = self._mcache.get('uid:%s' % str(user))
-        if user_record is None:
-            try:
-                logging.debug('Creating user %s' % email)
-                self.engine.execute(text('insert into user (user, email, '
-                    'metainfo) values (:user, :email, metainfo) '
-                    'on duplicate key update email = :email ;'),
-                    user=user,
-                    email=email,
-                    metainfo=json.dumps(metainfo),
-                    )
-                self._mcache.set('uid:%s' % str(user),
-                        json.dumps({'created': int(time.time())}))
-                return user
-            except Exception, e:
-                logging.error("Could not create new user [%s]" %
-                    repr(e))
-                raise
-        return user
+        if metainfo is None or 'created' not in metainfo:
+            if metainfo is None:
+                metainfo = {}
+            metainfo['created'] = int(time.time())
+        try:
+            logging.debug('Creating user %s' % email)
+            self.engine.execute(text('insert into user (user, email, '
+                'metainfo) values (:user, :email, metainfo) '
+                'on duplicate key update email = :email, '
+                'metainfo = :metainfo;'),
+                user=user,
+                email=email,
+                metainfo=json.dumps(metainfo),
+                )
+            self._mcache.set('uid:%s' % str(user),
+                    json.dumps({'created': int(time.time())}))
+            return self.get_user(user)
+        except Exception, e:
+            logging.error("Could not create new user [%s]" %
+                repr(e))
+            raise
+
+    def get_user(self, user):
+        if user is None:
+            return None
+        row = self.engine.execute(text('select user, email, metainfo '
+                'from user where user = :user limit 1;'),
+                    user=user).fetchone()
+        response = {'user': row[0],
+                'email': row[1],
+                'metainfo': {}}
+        if len(row[2]):
+            response['metainfo'] = json.loads(row[2])
+        return response
+
+    def remove_user(self, user, email):
+        logging.warn("Removing user %s " % user)
+        self.engine.execute(text('delete from user where user = :user'),
+               user=user)
+        self._mcache.delete('uid:%s' % str(user))
+        return None
+
+

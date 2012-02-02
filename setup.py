@@ -15,6 +15,7 @@ setup(
     long_description=""""
     Common storage library for BIPostal
     """,
+    url="https://wiki.mozilla.org/Services/Notifications/Bipostal",
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
