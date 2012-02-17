@@ -9,9 +9,13 @@ import time
 from sqlalchemy import (Table, Column,
         String, Integer, Enum, MetaData, Text,
         create_engine, text)
+from bipostal.storage import BipostalStorageException
 
 
 class Storage(object):
+
+    states = ['active', 'inactive', 'deleted']
+    defaultState = 'active'
 
     def _connect(self):
         try:
@@ -41,9 +45,9 @@ class Storage(object):
                     Column('user', String(255)),
                     Column('origin', String(190), nullable=True),
                     Column('created', Integer),
-                    Column('status', Enum(['active', 'inactive', 'deleted'],
+                    Column('status', Enum(self.states,
                         strict=True,
-                        default='active')),
+                        default=self.defaultState)),
                     Column('metainfo', Text, nullable=True)
                     )
             self.metadata.create_all(self.engine)
@@ -51,9 +55,21 @@ class Storage(object):
                     kw['memcache.servers']))
         except Exception, ex:
             logging.error("""Could not initialize Storage: "%s" """, str(ex))
+            raise ex
 
-    def resolve_alias(self, alias, origin=None, status='active'):
+    def _resolve_status(self, status):
+        if status is None:
+            status = self.defaultState
+        status = status.lower()
+        if status not in self.states:
+            raise BipostalStorageException('Invalid state specified. Please use "%s"' %
+                    ', '.join(self.states))
+        return status
+        
+
+    def resolve_alias(self, alias, origin=None, status=None):
         lookup = str('s2u:%s' % str(alias))
+        status = self._resolve_status(status)
         mresult = self._mcache.get(lookup)
         if mresult is None:
             logging.info('Cache miss for %s' % alias )
@@ -78,7 +94,7 @@ class Storage(object):
                 'status': status}
 
     def add_alias(self, user, alias, origin=None,
-                  status='active',
+                  status=None,
                   info=None,
                   created=None):
         alias = alias.lower()
@@ -86,6 +102,7 @@ class Storage(object):
             created = time.time()
         if info is None:
             info = {}
+        status = self._resolve_status(status)
         try:
             query = 'select alias from alias where user=:user '
             if origin is not None:
@@ -126,23 +143,21 @@ class Storage(object):
             resp = {'email': user,
                     'alias': alias,
                     'origin': origin,
-                    'status': status.lower()}
+                    'status': status}
             return resp
         except ValueError, e:
-            logging.error("""Invalid value for alias creation "%s" """ %
-                          str(e))
-            return False
+            errstr = """Invalid value for alias creation "%s" """ % str(e)
+            logging.error(errstr)
+            raise BipostalStorageException(errstr)
 
-    def get_aliases(self, user, status='active'):
+    def get_aliases(self, user):
         try:
             query = ('select alias, origin, status '
                         'from alias where '
+                        'status != "deleted" and '
                         'user=:user')
-            if status.lower() not in ['all', '*', '%']:
-                query += ' and status=:status '
             rows = self.engine.execute(text(query),
-                    user=user,
-                    status=status).fetchall()
+                    user=user).fetchall()
             result = []
             for row in rows:
                 origin = row[1]
@@ -158,10 +173,11 @@ class Storage(object):
                                                                     str(e)))
             raise
 
-    def set_status_alias(self, user, alias, origin=None, status='deleted'):
+    def set_status_alias(self, user, alias, origin=None, status=None):
         try:
             query = ('update alias set status=:status where user=:user and '
                     'alias=:alias')
+            status = self._resolve_status(status)
             if origin is not None:
                 query += ' and origin=:origin '
             self.engine.execute(text(query),
@@ -186,7 +202,7 @@ class Storage(object):
 
     def disable_alias(self, user, alias, origin=None):
         logging.debug('Disabling alias %s for user %s' % (alias, user))
-        result = self.set_status_alias(user, alias, origin, status='disabled')
+        result = self.set_status_alias(user, alias, origin, status='inactive')
         if result:
             self._mcache.delete('s2u:%s' % str(alias))
         return result

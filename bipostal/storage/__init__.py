@@ -4,6 +4,12 @@
 
 from bipostal import _resolve_name
 
+class BipostalStorageException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
 
 def get_group(group_name, dictionary):
     if group_name is None:
