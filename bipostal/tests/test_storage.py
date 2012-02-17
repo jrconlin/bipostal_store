@@ -3,7 +3,8 @@ import unittest2
 
 from nose.tools import eq_
 
-from bipostal.storage import configure_from_settings
+from bipostal.storage import (BipostalStorageException, 
+            configure_from_settings)
 from pyramid import testing
 
 class JSONRequest(testing.DummyRequest):
@@ -52,6 +53,12 @@ class StorageTest(unittest2.TestCase):
              'origin': None,
              'status': 'active',
              'alias': self.alias})
+
+    def test_bogus_status(self):
+        if self.storage is None:
+            return
+        with self.assertRaises(BipostalStorageException):
+            self.storage.add_alias(self.email, self.alias, status='bogus')
 
     def test_resolve_alias_unknown_alias(self):
         if self.storage is None:
