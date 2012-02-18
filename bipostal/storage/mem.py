@@ -27,7 +27,10 @@ class Storage(object):
         return status
         
     def resolve_alias(self, alias, origin=None):
-        return self.db.get(self.key_pattern % (alias, origin), {})
+        rv = self.db.get(self.key_pattern % (alias, origin), {})
+        if rv.get('status', '') != 'active':
+            rv = {}
+        return rv
 
     def add_alias(self, user, alias, origin=None, status=None):
         status = self._resolve_status(status)
@@ -38,6 +41,12 @@ class Storage(object):
                                'alias': alias}
         self.db.setdefault(user, []).append(key)
         return rv
+
+    def set_status_alias(self, user, alias, origin=None, status=None):
+        status = self._resolve_status(status)
+        key = self.key_pattern % (alias, origin)
+        self.db[key]['status'] = status
+        return self.db[key]
 
     def get_aliases(self, user):
         result = []

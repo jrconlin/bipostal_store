@@ -185,6 +185,8 @@ class Storage(object):
                     user=user,
                     origin=origin,
                     alias=alias)
+            # flush the alias (it will be picked up if need be)
+            self._mcache.delete('s2u:%s' % str(alias));
             return {'alias': alias,
                     'email': user,
                     'origin': origin,

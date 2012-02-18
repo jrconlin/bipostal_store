@@ -141,6 +141,11 @@ class StorageTest(unittest2.TestCase):
         # No crash when we try to delete an unknown email.
         self.storage.delete_alias(self.email, self.alias)
 
+    def test_disabled_alias(self):
+        self.storage.add_alias(self.email, self.alias)
+        self.storage.set_status_alias(self.email, 
+                self.alias, status='inactive')
+        eq_({}, self.storage.resolve_alias(self.alias))
 
     def test_user(self):
         if self.storage is None:
