@@ -76,7 +76,7 @@ class Storage(object):
             query = ('select user from alias where ' +
                 'alias=:alias and status=:status ')
             if origin is not None:
-                query += 'and origin=:origin '
+                query += ' and origin=:origin '
             query += 'limit 1;'
             result = self.engine.execute(text(query), alias=alias,
                         status=status,
@@ -106,7 +106,7 @@ class Storage(object):
         try:
             query = 'select alias from alias where user=:user '
             if origin is not None:
-                query += 'and origin=:origin '
+                query += ' and origin=:origin '
             query += 'limit 1;'
             row = self.engine.execute(text(query),
                     user=user,
@@ -132,7 +132,7 @@ class Storage(object):
                 query = ('update alias set status=:status where '
                         'alias=alias')
                 if origin is not None:
-                    query += 'and origin=:origin '
+                    query += ' and origin=:origin '
                 self.engine.execute(text(query),
                         status=status,
                         alias=alias,
