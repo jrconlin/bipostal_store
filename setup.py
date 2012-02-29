@@ -7,7 +7,7 @@ from setuptools import setup
 
 setup(
     name='bipostal_storage',
-    version='0.4',
+    version='0.5',
     description='Shared storage for bipostal* functions',
     author='JR Conlin',
     author_email='jrconlin+bipostal@mozilla.org',

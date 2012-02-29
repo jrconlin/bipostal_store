@@ -6,14 +6,16 @@ PI = $(TP)/bin/pip
 APPNAME = bipostal
 NO = bin/nosetests -s --with-xunit --cover-package=$(APPNAME)
 
+build: clean setup dist
+
+setup:
+	$(VE) --no-site-packages .
+	$(PI) install -r dev-reqs.txt
+
 clean:
 	rm -rf bipostal_storage.egg-info
 	rm -rf build
 	rm -rf dist
-
-build:
-	$(VE) --no-site-packages .
-	$(PI) install -r dev-reqs.txt
 
 install: 
 	$(PY) setup.py install

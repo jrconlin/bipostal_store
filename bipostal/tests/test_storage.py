@@ -48,11 +48,12 @@ class StorageTest(unittest2.TestCase):
             return;
         self.storage.add_alias(self.email, self.alias)
         ret = self.storage.resolve_alias(self.alias)
-        eq_(ret,
-            {'email': self.email,
-             'origin': None,
+        eq_( {'alias': self.alias,
              'status': 'active',
-             'alias': self.alias})
+             'email': self.email,
+             'user': self.email,
+             'origin': None},
+              ret)
 
     def test_bogus_status(self):
         if self.storage is None:
@@ -72,16 +73,19 @@ class StorageTest(unittest2.TestCase):
         result = self.storage.add_alias(self.email, self.alias)
         result = self.storage.resolve_alias(self.alias)
         eq_(self.storage.resolve_alias(self.alias),
-            {'email': self.email,
+            { 'alias': self.alias,
              'status': 'active',
-             'origin': None,
-             'alias': self.alias})
+             'email': self.email,
+             'user': self.email,
+             'origin': None })
         result = self.storage.get_aliases(self.email)
         eq_(result,
             [{'alias': self.alias,
               'status': 'active',
+              'email': self.email,
+              'user': self.email,
               'origin': None,
-              'email': self.email}])
+              }])
 
     def test_get_aliases(self):
         if self.storage is None:
@@ -89,20 +93,26 @@ class StorageTest(unittest2.TestCase):
         self.storage.add_alias(self.email, self.alias, origin='example.com')
         eq_(self.storage.get_aliases(self.email),
             [{'alias': self.alias,
+              'user': self.email,
               'status': 'active',
+              'email': self.email,
               'origin': 'example.com',
-              'email': self.email}])
+              }])
 
         self.storage.add_alias(self.email, self.alias2, origin='example.org')
         key = lambda x: x['alias']
         expected = [{'alias': self.alias2,
                      'status': 'active',
+                     'user': self.email,
+                     'email': self.email,
                      'origin': 'example.org',
-                     'email': self.email},
+                     },
                     {'alias': self.alias,
                      'status': 'active',
+                     'user': self.email,
+                     'email': self.email,
                      'origin': 'example.com',
-                     'email': self.email}]
+                     }]
         eq_(sorted(self.storage.get_aliases(self.email), key=key),
             sorted(expected, key=key))
 
@@ -117,10 +127,21 @@ class StorageTest(unittest2.TestCase):
             return;
         self.storage.add_alias(self.email, self.alias)
         deleted = self.storage.delete_alias(self.email, self.alias)
-        eq_(deleted, {'email': self.email, 'origin': None,
-                      'alias': self.alias, 'status': 'deleted'})
+        eq_(deleted, {
+            'alias': self.alias,
+            'status': 'deleted',
+            'email': self.email, 
+            'user': self.email, 
+            'origin': None })
         eq_(self.storage.resolve_alias(self.alias), {})
         eq_(self.storage.get_aliases(self.email), [])
+        self.storage.add_alias(self.email, self.alias)
+        eq_(self.storage.resolve_alias(self.alias),
+                {'alias': self.alias,
+                    'status': 'active',
+                    'email': self.email,
+                    'user': self.email,
+                    'origin': None})
 
     def test_delete_alias_unknown_alias(self):
         if self.storage is None:
@@ -129,11 +150,17 @@ class StorageTest(unittest2.TestCase):
         self.storage.add_alias(self.email, self.alias)
         self.storage.delete_alias(self.email, self.alias2)
         eq_(self.storage.get_aliases(self.email),
-            [{'alias': self.alias, 'origin': None,
-              'status': 'active', 'email': self.email}])
+            [{ 'alias': self.alias, 
+                'status': 'active', 
+                'email': self.email,
+                'user': self.email, 
+                'origin': None }])
         eq_(self.storage.resolve_alias(self.alias),
-            {'email': self.email, 'origin': None,
-             'status': 'active', 'alias': self.alias})
+            { 'alias': self.alias,
+                'status': 'active', 
+                'email': self.email, 
+                'user': self.email, 
+                'origin': None })
 
     def test_delete_alias_unknown_email(self):
         if self.storage is None:
@@ -145,7 +172,15 @@ class StorageTest(unittest2.TestCase):
         self.storage.add_alias(self.email, self.alias)
         self.storage.set_status_alias(self.email, 
                 self.alias, status='inactive')
-        eq_({}, self.storage.resolve_alias(self.alias))
+        #allow "disabled" aliases to resolve. We're rejecting them in 
+        # bipostal_milter
+        eq_(self.storage.resolve_alias(self.alias),
+                {'alias': self.alias,
+                    'status': 'inactive',
+                    'email': self.email,
+                    'user': self.email,
+                    'origin': None})
+        #eq_({}, self.storage.resolve_alias(self.alias))
 
     def test_user(self):
         if self.storage is None:
@@ -210,5 +245,6 @@ class MysqlMemcacheTest(StorageTest):
                     'mysql.user_db': 'bipostal.user',
                     'memcache.servers': 'localhost:11211'}
         self.storage = configure_from_settings('storage', settings)
-        self.storage.flushall()
 
+    def tearDown(self):
+        self.storage.flushall(pattern='%@example.com')
