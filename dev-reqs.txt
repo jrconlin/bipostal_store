@@ -1,6 +1,7 @@
 nose
 redis == 2.4.10
 python_memcached
+pyramid
 mysql_python
 sqlalchemy
 unittest2
