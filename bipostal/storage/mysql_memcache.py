@@ -195,6 +195,34 @@ class Storage(object):
                                                                     str(e)))
             raise
 
+    def get_alias_for_origin(self, user, origin):
+        try:
+            query = ('select alias, status, email, user, origin '
+                        'from alias where '
+                        'status != "deleted" and '
+                        'user=:user and '
+                        'origin=:origin ')
+            rows = self.engine.execute(text(query),
+                    user=user,
+                    origin=origin).fetchall()
+            result = []
+            # hopefully, there's only one
+            for row in rows:
+                origin = row[4]
+                if origin is '':
+                    origin = None
+                result.append({'alias': row[0],
+                               'status': row[1],
+                               'email': row[2],
+                               'user': user,
+                               'origin': origin})
+            return result
+        except Exception, e:
+            logging.error('Could not fetch alias for '
+                    'user/origin (%s/%s) "%s"' % (user, str(e)))
+            raise
+
+
     def set_status_alias(self, user, alias, email=None, origin=None, status=None):
         try:
             query = ('update alias set status=:status where user=:user and '

@@ -57,7 +57,8 @@ class Storage(object):
         aliases = self.db.get(user, [])
         for alias in aliases:
             elem = alias.split('-', 1)
-            result.append(self.resolve_alias(alias=elem[0], origin=elem[1]))
+            result.append(self.resolve_alias(alias=elem[0], 
+                origin=elem[1]))
         return result
 
     def delete_alias(self, user, alias, origin=None):
@@ -74,6 +75,16 @@ class Storage(object):
         if user is None:
             return None
         return self.user[user]
+
+    def get_alias_for_origin(self, user, origin):
+        result = []
+        aliases= self.db.get(user, [])
+        for alias in aliases:
+            if origin in alias:
+                elem = alias.split('-', 1)
+                result.append(self.resolve_alias(alias=elem[0],
+                    origin=elem[1]))
+        return result
 
     def remove_user(self, user, email):
         if user is None:

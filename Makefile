@@ -20,7 +20,7 @@ clean:
 install: 
 	$(PY) setup.py install
 
-dist: clean build
+dist: 
 	$(PY) setup.py sdist --dist-dir dist
 
 test: 
