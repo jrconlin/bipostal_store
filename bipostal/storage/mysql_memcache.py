@@ -78,7 +78,8 @@ class Storage(object):
             if origin is not None:
                 query += ' and origin=:origin '
             query += 'limit 1;'
-            result = self.engine.execute(text(query), alias=alias,
+            result = self.engine.execute(text(query), 
+                        alias=alias,
                         origin=origin).fetchone()
             if result is None:
                 logging.info('No active alias for %s' % alias )
@@ -250,14 +251,16 @@ class Storage(object):
 
     def delete_alias(self, user, alias, origin=None):
         logging.debug('Deleting alias %s for user %s' % (alias, user))
-        result = self.set_status_alias(user, alias, origin, status='deleted')
+        result = self.set_status_alias(user, alias, 
+                origin=origin, status='deleted')
         if result:
             self._mcache.delete('s2u:%s' % str(alias))
         return result
 
     def disable_alias(self, user, alias, origin=None):
         logging.debug('Disabling alias %s for user %s' % (alias, user))
-        result = self.set_status_alias(user, alias, origin, status='inactive')
+        result = self.set_status_alias(user, alias, 
+                origin=origin, status='inactive')
         if result:
             self._mcache.delete('s2u:%s' % str(alias))
         return result
