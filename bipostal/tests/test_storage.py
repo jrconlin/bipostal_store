@@ -124,7 +124,6 @@ class StorageTest(unittest2.TestCase):
                      'email': self.email,
                      'origin': self.origin,
                      }]
-        import pdb; pdb.set_trace();
         eq_(sorted(self.storage.get_aliases(self.email), 
                 key=key),
                 sorted(expected, key=key))
